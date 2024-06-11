@@ -1,0 +1,2 @@
+example text hello world!
+example 2: I want to learn rust rust ruts
