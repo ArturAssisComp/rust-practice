@@ -5,6 +5,10 @@ pub fn and(a: u8, b: u8) -> u8 {
     (a & b) % 2
 }
 
+pub fn xor(a: u8, b: u8) -> u8 {
+    (a ^ b) % 2
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -47,6 +51,40 @@ mod tests {
         } in test_cases
         {
             assert_eq!(and(a, b), expected, "{}", description);
+        }
+    }
+
+    #[test]
+    fn test_xor() {
+        let test_cases: [TestTemplate; 4] = [
+            TestTemplate {
+                input: (0, 0),
+                expected: 0,
+                description: "0 ^ 0 = 0",
+            },
+            TestTemplate {
+                input: (0, 1),
+                expected: 1,
+                description: "0 ^ 1 = 1",
+            },
+            TestTemplate {
+                input: (1, 0),
+                expected: 1,
+                description: "1 ^ 0 = 1",
+            },
+            TestTemplate {
+                input: (1, 1),
+                expected: 0,
+                description: "1 ^ 1 = 0",
+            },
+        ];
+        for TestTemplate {
+            input: (a, b),
+            expected,
+            description,
+        } in test_cases
+        {
+            assert_eq!(xor(a, b), expected, "{}", description);
         }
     }
 }
