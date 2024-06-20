@@ -1,10 +1,16 @@
 //! This is a simple logic gate simulation project to practice implementation of
 //! unit and integrated tests and also rust in general.
 
+/// This function represents the logic gate `and`. It receives two bits and
+/// returns a bit as result. The `and` gate returns 1 if and only if both inputs
+/// are 1. Otherwise, it returns 0.
 pub fn and(a: u8, b: u8) -> u8 {
     (a & b) % 2
 }
 
+/// This function represents the logic gate `xor`. It receives two bits and
+/// returns a bit as result. The `xor` gate returns 1 if and only if exactly one
+/// of the inputs is 1. Otherwise, it returns 0.
 pub fn xor(a: u8, b: u8) -> u8 {
     (a ^ b) % 2
 }
