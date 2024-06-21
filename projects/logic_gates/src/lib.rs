@@ -1,3 +1,7 @@
+#![doc(
+    html_logo_url = "https://th.bing.com/th/id/OIP.nXQrAEVILEZM61I9eJL1KgHaF9?rs=1&pid=ImgDetMain"
+)]
+
 //! This is a simple logic gate simulation project to practice implementation of
 //! unit and integrated tests and also rust in general.
 
