@@ -1,4 +1,5 @@
 use std::convert::From;
+use std::fmt::{Display, Formatter, Result};
 use std::ops::Add;
 
 #[derive(Default, Debug, PartialEq, Copy, Clone)]
@@ -26,6 +27,12 @@ impl<T> From<(T, T)> for Complex<T> {
             real: value.0,
             imaginary: value.1,
         }
+    }
+}
+
+impl<T: Display> Display for Complex<T> {
+    fn fmt(&self, f: &mut Formatter) -> Result {
+        write!(f, "{} + {}i", self.real, self.imaginary)
     }
 }
 
@@ -69,5 +76,13 @@ mod tests {
 
         assert_eq!(result.real, real, "Check the real part");
         assert_eq!(result.imaginary, imaginary, "Check the imaginary part");
+    }
+
+    #[test]
+    fn complex_display() {
+        let number = Complex::new(123, 375);
+        let expected_result = "123 + 375i";
+
+        assert_eq!(format!("{number}"), expected_result, "Check display")
     }
 }
