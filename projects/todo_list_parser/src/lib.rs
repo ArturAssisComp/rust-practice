@@ -47,14 +47,3 @@ pub fn parse_todos(todo_str: &str) -> Result<TodoList, Box<dyn Error>> {
         Ok(TodoList { tasks: tasks })
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
-    }
-}
