@@ -4,5 +4,7 @@ members = [ "projects/complex",
     "projects/logic_gates",
     "projects/word_counter",
     "projects/todo_list_parser", 
-    "projects/macro_map", "projects/macro_exercises",
+    "projects/macro_map", 
+    "projects/macro_exercises", 
+    "projects/user_auth",
 ]
