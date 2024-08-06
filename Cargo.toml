@@ -1,4 +1,5 @@
 [workspace]
+resolver = "2"
 members = [ "projects/complex",
     "projects/complex",
     "projects/logic_gates",
@@ -6,5 +7,6 @@ members = [ "projects/complex",
     "projects/todo_list_parser", 
     "projects/macro_map", 
     "projects/macro_exercises", 
-    "projects/user_auth",
+    "projects/user_auth", 
+    "projects/env_logger_demo",
 ]
