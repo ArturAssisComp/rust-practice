@@ -8,5 +8,5 @@ members = [ "projects/complex",
     "projects/macro_map", 
     "projects/macro_exercises", 
     "projects/user_auth", 
-    "projects/env_logger_demo",
+    "projects/env_logger_demo", "projects/slog_demo",
 ]
