@@ -1,8 +1,9 @@
-use std::{error::Error, fs};
+use std::{env, error::Error, fs};
 
 pub struct ParsedMainArgs<'a> {
     query: &'a str,
     file_path: &'a str,
+    ignore_case: bool,
 }
 impl<'a> ParsedMainArgs<'a> {
     pub fn file_path(&self) -> &str {
@@ -18,17 +19,25 @@ impl<'a> ParsedMainArgs<'a> {
                     .expect("The name of the program is expected as the first argument")
             ));
         }
+        let ignore_case = env::var("IGNORE_CASE").is_ok();
         Ok(Self {
             query: &args[1],
             file_path: &args[2],
+            ignore_case,
         })
     }
 }
 
 pub fn run(parsed_main_args: &ParsedMainArgs) -> Result<(), Box<dyn Error>> {
     let file_content = fs::read_to_string(parsed_main_args.file_path)?;
-    for (n, found_line) in search(parsed_main_args.query, &file_content) {
-        println!("({}): \"{found_line}\"", n + 1);
+    if parsed_main_args.ignore_case {
+        for (n, found_line) in search_case_insensitive(parsed_main_args.query, &file_content) {
+            println!("({}): \"{found_line}\"", n + 1);
+        }
+    } else {
+        for (n, found_line) in search(parsed_main_args.query, &file_content) {
+            println!("({}): \"{found_line}\"", n + 1);
+        }
     }
     Ok(())
 }
@@ -122,6 +131,9 @@ mod tests {
                 );
             }
         }
+    }
+    mod search_case_insensitive {
+        use super::*;
 
         #[test]
         fn should_match_return_search_case_insensitive() {
