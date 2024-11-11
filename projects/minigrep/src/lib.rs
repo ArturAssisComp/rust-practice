@@ -1,41 +1,53 @@
 use std::{env, error::Error, fs};
 
-pub struct ParsedMainArgs<'a> {
-    query: &'a str,
-    file_path: &'a str,
+pub struct ParsedMainArgs {
+    query: String,
+    file_path: String,
     ignore_case: bool,
 }
-impl<'a> ParsedMainArgs<'a> {
+impl ParsedMainArgs {
     pub fn file_path(&self) -> &str {
-        self.file_path
+        self.file_path.as_str()
     }
-    pub fn build(args: &'a [String]) -> Result<Self, String> {
-        if args.len() != 3 {
+    pub fn build(mut args: impl Iterator<Item = String>) -> Result<Self, String> {
+        let binding = args
+            .next()
+            .expect("The name of the program is expected as the first argument");
+        let filename = binding
+            .rsplit(|c| c == '\\' || c == '/')
+            .next()
+            .expect("The name of the program is expected as the first argument");
+
+        let Some(query) = args.next() else {
             return Err(format!(
-                "Usage: {} <query> <file_path>",
-                args[0]
-                    .rsplit(|c| c == '\\' || c == '/')
-                    .next()
-                    .expect("The name of the program is expected as the first argument")
+                "Usage (query not found): {filename} <query> <file_path>"
             ));
-        }
+        };
+
+        let Some(file_path) = args.next() else {
+            return Err(format!(
+                "Usage (file path not found): {filename} <query> <file_path>"
+            ));
+        };
         let ignore_case = env::var("IGNORE_CASE").is_ok();
         Ok(Self {
-            query: &args[1],
-            file_path: &args[2],
+            query: query,
+            file_path: file_path,
             ignore_case,
         })
     }
 }
 
 pub fn run(parsed_main_args: &ParsedMainArgs) -> Result<(), Box<dyn Error>> {
-    let file_content = fs::read_to_string(parsed_main_args.file_path)?;
+    let file_content = fs::read_to_string(parsed_main_args.file_path.as_str())?;
     if parsed_main_args.ignore_case {
-        for (n, found_line) in search_case_insensitive(parsed_main_args.query, &file_content) {
+        for (n, found_line) in
+            search_case_insensitive(parsed_main_args.query.as_str(), &file_content)
+        {
             println!("({}): \"{found_line}\"", n + 1);
         }
     } else {
-        for (n, found_line) in search(parsed_main_args.query, &file_content) {
+        for (n, found_line) in search(parsed_main_args.query.as_str(), &file_content) {
             println!("({}): \"{found_line}\"", n + 1);
         }
     }
