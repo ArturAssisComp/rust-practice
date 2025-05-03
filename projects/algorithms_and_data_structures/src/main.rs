@@ -1,4 +1,7 @@
+const MAX_LEVELS: usize = 100;
+
 mod heap {
+    use crate::MAX_LEVELS;
     use std::fmt::Display;
 
     macro_rules! parent {
@@ -27,26 +30,94 @@ mod heap {
         }};
     }
 
-    struct Heap<T: Default + PartialOrd + Copy + Display> {
+    pub struct Heap<T: Default + PartialOrd + Copy + Display> {
         // Our heap starts from the index: 1 to make the left operation faster.
         array: Vec<T>,
     }
 
     impl<T: Default + PartialOrd + Copy + Display> Display for Heap<T> {
         fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-            let mut i = 1;
-
-            while  {
-                
-            }
-
-            write!(f, "{}", )
+            self.recursive_fmt(f, 1, &mut [false; MAX_LEVELS])
         }
     }
 
     impl<T: Default + PartialOrd + Copy + Display> Heap<T> {
-        fn recursive_fmt(level: usize, ) {
-            
+        /// Prints the current part of the tree.
+        ///
+        /// # Arguments
+        /// - `index`: the index of the element of the heap
+        /// - `vertical_bar_levels`: a reference to the vector indicating the levels in
+        /// which the vertical line `│` will be printed.
+        ///
+        /// Special chars:
+        /// ├─
+        /// │
+        /// └─
+        /// # Example
+        /// - E0: [3]
+        /// 3
+        ///
+        /// - E1: [3, 2, 1]
+        /// 3
+        /// ├─1
+        /// └─2
+        ///
+        /// - E2: [e, d, c, b, a]
+        /// e
+        /// ├─c
+        /// └─d
+        ///   ├─a
+        ///   └─b
+        ///
+        /// - E3: [10, 8, 4, 4, 3, 2]
+        /// 10
+        /// ├─4
+        /// │ └─2
+        /// └─8
+        ///   ├─3
+        ///   └─4
+        fn recursive_fmt(
+            &self,
+            f: &mut std::fmt::Formatter<'_>,
+            index: usize,
+            has_vertical_bar_arr: &mut [bool; MAX_LEVELS],
+        ) -> std::fmt::Result {
+            let level = index.ilog2() as usize;
+            let parent = self.array[index];
+            write!(f, "{parent}")?;
+            let l = left!(index);
+            if l > self.size() {
+                return Ok(());
+            }
+            let preffix = Heap::<T>::build_preffix(level, has_vertical_bar_arr);
+            let r = right!(index);
+            if r <= self.size() {
+                // ├─
+                write!(f, "\n{preffix}├─")?;
+
+                has_vertical_bar_arr[level] = true;
+                self.recursive_fmt(f, r, has_vertical_bar_arr)?;
+                has_vertical_bar_arr[level] = false;
+            }
+            // └─2
+            write!(f, "\n{preffix}└─")?;
+            self.recursive_fmt(f, l, has_vertical_bar_arr)
+        }
+
+        fn build_preffix(level: usize, has_vertical_bar_arr: &mut [bool; MAX_LEVELS]) -> String {
+            let str_builder = &mut vec![];
+            let space = "  ";
+            let vertical_bar = "│ ";
+            for i in 0..level {
+                let v = if has_vertical_bar_arr[i] {
+                    vertical_bar
+                } else {
+                    space
+                };
+                str_builder.push(v);
+            }
+
+            str_builder.join("")
         }
 
         /// This method creates a new heap from `initial_array`. The heap is a data
@@ -298,6 +369,81 @@ mod heap {
         test_heapfy!(test_heapfy, heapfy);
 
         #[test]
+        fn test_display() {
+            //
+            assert_eq!(Heap::build_heap(vec![10]).to_string(), "10");
+            assert_eq!(
+                Heap::build_heap(vec![2, 3]).to_string(),
+                "\
+3
+└─2\
+                "
+            );
+            assert_eq!(
+                Heap::build_heap(vec![1, 2, 3]).to_string(),
+                "\
+3
+├─1
+└─2\
+                "
+            );
+            assert_eq!(
+                Heap::build_heap(vec!['e', 'd', 'c', 'b', 'a']).to_string(),
+                "\
+e
+├─c
+└─d
+  ├─a
+  └─b\
+                "
+            );
+
+            assert_eq!(
+                Heap::build_heap(vec![10, 8, 4, 4, 3, 2]).to_string(),
+                "\
+10
+├─4
+│ └─2
+└─8
+  ├─3
+  └─4\
+                "
+            );
+
+            assert_eq!(
+                Heap::build_heap(vec![10, 8, 4, 4, 3, 2]).to_string(),
+                "\
+10
+├─4
+│ └─2
+└─8
+  ├─3
+  └─4\
+                "
+            );
+            assert_eq!(
+                Heap::build_heap(vec![10, 4, 8, 3, 4, 6, 7, 1, 2, 1, -5, 0, 2, 1, 0]).to_string(),
+                "\
+10
+├─8
+│ ├─7
+│ │ ├─0
+│ │ └─1
+│ └─6
+│   ├─2
+│   └─0
+└─4
+  ├─4
+  │ ├─-5
+  │ └─1
+  └─3
+    ├─2
+    └─1\
+    "
+            );
+        }
+
+        #[test]
         fn test_is_heap() {
             assert!(Heap::<u8>::is_heap(&vec![u8::default()]));
             assert!(Heap::is_heap(&vec![char::default(), 'a']));
@@ -512,7 +658,11 @@ mod heap {
         }
     }
 }
+use heap::Heap;
 
 fn main() {
-    println!("Hello, world!");
+    println!(
+        "{}",
+        Heap::build_heap(vec![10, 4, 8, 3, 4, 6, 7, 1, 2, 1, -5, 0, 2, 1, 0])
+    );
 }
