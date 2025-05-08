@@ -3,6 +3,7 @@ const MAX_LEVELS: usize = 100;
 mod heap {
     use crate::MAX_LEVELS;
     use std::fmt::Display;
+    use std::marker::PhantomData;
 
     macro_rules! parent {
         ($i:expr) => {
@@ -30,18 +31,29 @@ mod heap {
         }};
     }
 
-    pub struct Heap<T: Default + PartialOrd + Copy + Display> {
+    mod sealed {
+        pub trait HeapState {}
+        pub struct Sorted;
+        pub struct NotSorted;
+    }
+    use sealed::{HeapState, NotSorted, Sorted};
+
+    impl HeapState for Sorted {}
+    impl HeapState for NotSorted {}
+
+    pub struct Heap<T: Default + PartialOrd + Copy + Display, S: HeapState> {
+        state: PhantomData<S>,
         // Our heap starts from the index: 1 to make the left operation faster.
         array: Vec<T>,
     }
 
-    impl<T: Default + PartialOrd + Copy + Display> Display for Heap<T> {
+    impl<T: Default + PartialOrd + Copy + Display> Display for Heap<T, NotSorted> {
         fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
             self.recursive_fmt(f, 1, &mut [false; MAX_LEVELS])
         }
     }
 
-    impl<T: Default + PartialOrd + Copy + Display> Heap<T> {
+    impl<T: Default + PartialOrd + Copy + Display> Heap<T, NotSorted> {
         /// Prints the current part of the tree.
         ///
         /// # Arguments
@@ -89,7 +101,7 @@ mod heap {
             if l > self.size() {
                 return Ok(());
             }
-            let preffix = Heap::<T>::build_preffix(level, has_vertical_bar_arr);
+            let preffix = Heap::<T, NotSorted>::build_preffix(level, has_vertical_bar_arr);
             let r = right!(index);
             if r <= self.size() {
                 // ├─
@@ -136,8 +148,25 @@ mod heap {
                 i -= 1;
             }
 
-            Self { array }
+            Self {
+                array,
+                state: PhantomData,
+            }
         }
+
+        /*
+            pub fn heapsort(self)->Heap<T, Sorted> {
+                let mut length = self.size();
+
+                /*
+                while length >= 2 {
+
+
+                }
+                */
+
+            }
+        */
 
         fn size(&self) -> usize {
             self.array.len() - 1
@@ -154,7 +183,7 @@ mod heap {
         /// - C1: It is expected that the element with index 0 is a dummy element. The
         /// actual values of the heap will start from v[1..].
         /// - C2: i <= v.len() - 1
-        fn heapfy(v: &mut Vec<T>, i: usize) {
+        fn heapfy(v: &mut [T], i: usize) {
             let v_size = v.len() - 1;
             let mut i = i;
             loop {
@@ -445,7 +474,7 @@ e
 
         #[test]
         fn test_is_heap() {
-            assert!(Heap::<u8>::is_heap(&vec![u8::default()]));
+            assert!(Heap::<u8, _>::is_heap(&vec![u8::default()]));
             assert!(Heap::is_heap(&vec![char::default(), 'a']));
             assert!(Heap::is_heap(&vec![char::default(), 'c', 'b', 'a']));
             assert!(!Heap::is_heap(&vec!["", "a", "b", "a"]));
@@ -492,69 +521,81 @@ e
         #[test]
         fn test_build_heap() {
             // Empty heap
-            assert!(Heap::is_heap(&Heap::<u8>::build_heap(vec![]).array));
+            assert!(Heap::is_heap(&Heap::<u8, _>::build_heap(vec![]).array));
 
             // Single element
-            assert!(Heap::is_heap(&Heap::<u8>::build_heap(vec![1]).array));
+            assert!(Heap::is_heap(&Heap::<u8, _>::build_heap(vec![1]).array));
 
             // Two elements
-            assert!(Heap::is_heap(&Heap::<u8>::build_heap(vec![1, 2]).array));
-            assert!(Heap::is_heap(&Heap::<u8>::build_heap(vec![2, 1]).array));
+            assert!(Heap::is_heap(&Heap::<u8, _>::build_heap(vec![1, 2]).array));
+            assert!(Heap::is_heap(&Heap::<u8, _>::build_heap(vec![2, 1]).array));
 
             // Three elements
-            assert!(Heap::is_heap(&Heap::<u8>::build_heap(vec![2, 1, 45]).array));
-            assert!(Heap::is_heap(&Heap::<u8>::build_heap(vec![1, 2, 3]).array));
-            assert!(Heap::is_heap(&Heap::<u8>::build_heap(vec![3, 2, 1]).array));
-
-            // Duplicate elements
-            assert!(Heap::is_heap(&Heap::<u8>::build_heap(vec![1, 1, 1]).array));
             assert!(Heap::is_heap(
-                &Heap::<u8>::build_heap(vec![2, 1, 2, 1, 2]).array
+                &Heap::<u8, _>::build_heap(vec![2, 1, 45]).array
             ));
             assert!(Heap::is_heap(
-                &Heap::<u8>::build_heap(vec![5, 5, 3, 3, 1, 1]).array
+                &Heap::<u8, _>::build_heap(vec![1, 2, 3]).array
+            ));
+            assert!(Heap::is_heap(
+                &Heap::<u8, _>::build_heap(vec![3, 2, 1]).array
+            ));
+
+            // Duplicate elements
+            assert!(Heap::is_heap(
+                &Heap::<u8, _>::build_heap(vec![1, 1, 1]).array
+            ));
+            assert!(Heap::is_heap(
+                &Heap::<u8, _>::build_heap(vec![2, 1, 2, 1, 2]).array
+            ));
+            assert!(Heap::is_heap(
+                &Heap::<u8, _>::build_heap(vec![5, 5, 3, 3, 1, 1]).array
             ));
 
             // Already a valid max heap
             assert!(Heap::is_heap(
-                &Heap::<u8>::build_heap(vec![10, 8, 9, 4, 5, 6, 7]).array
+                &Heap::<u8, _>::build_heap(vec![10, 8, 9, 4, 5, 6, 7]).array
             ));
 
             // Already a valid min heap (should be converted to max heap)
             assert!(Heap::is_heap(
-                &Heap::<u8>::build_heap(vec![1, 2, 3, 4, 5, 6, 7]).array
+                &Heap::<u8, _>::build_heap(vec![1, 2, 3, 4, 5, 6, 7]).array
             ));
 
             // Reverse sorted array
             assert!(Heap::is_heap(
-                &Heap::<u8>::build_heap(vec![7, 6, 5, 4, 3, 2, 1]).array
+                &Heap::<u8, _>::build_heap(vec![7, 6, 5, 4, 3, 2, 1]).array
             ));
 
             // Random unordered array
             assert!(Heap::is_heap(
-                &Heap::<u8>::build_heap(vec![3, 7, 1, 9, 2, 8, 4, 6, 5]).array
+                &Heap::<u8, _>::build_heap(vec![3, 7, 1, 9, 2, 8, 4, 6, 5]).array
             ));
 
             // Edge values for u8
-            assert!(Heap::is_heap(&Heap::<u8>::build_heap(vec![0]).array));
-            assert!(Heap::is_heap(&Heap::<u8>::build_heap(vec![255]).array));
-            assert!(Heap::is_heap(&Heap::<u8>::build_heap(vec![0, 255]).array));
-            assert!(Heap::is_heap(&Heap::<u8>::build_heap(vec![255, 0]).array));
+            assert!(Heap::is_heap(&Heap::<u8, _>::build_heap(vec![0]).array));
+            assert!(Heap::is_heap(&Heap::<u8, _>::build_heap(vec![255]).array));
             assert!(Heap::is_heap(
-                &Heap::<u8>::build_heap(vec![0, 127, 255]).array
+                &Heap::<u8, _>::build_heap(vec![0, 255]).array
+            ));
+            assert!(Heap::is_heap(
+                &Heap::<u8, _>::build_heap(vec![255, 0]).array
+            ));
+            assert!(Heap::is_heap(
+                &Heap::<u8, _>::build_heap(vec![0, 127, 255]).array
             ));
 
             // Large heap with repeated pattern
             assert!(Heap::is_heap(
-                &Heap::<u8>::build_heap(vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10]).array
+                &Heap::<u8, _>::build_heap(vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10]).array
             ));
 
             // Power of 2 sized arrays (complete binary trees)
             assert!(Heap::is_heap(
-                &Heap::<u8>::build_heap(vec![5, 4, 3, 2, 1, 0, 9, 8]).array
+                &Heap::<u8, _>::build_heap(vec![5, 4, 3, 2, 1, 0, 9, 8]).array
             )); // 8 elements
             assert!(Heap::is_heap(
-                &Heap::<u8>::build_heap(vec![
+                &Heap::<u8, _>::build_heap(vec![
                     1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16
                 ])
                 .array
@@ -562,51 +603,53 @@ e
 
             // Nearly complete binary tree
             assert!(Heap::is_heap(
-                &Heap::<u8>::build_heap(vec![5, 4, 3, 2, 1, 0, 9]).array
+                &Heap::<u8, _>::build_heap(vec![5, 4, 3, 2, 1, 0, 9]).array
             )); // 7 elements
             assert!(Heap::is_heap(
-                &Heap::<u8>::build_heap(vec![1, 2, 3, 4, 5, 6, 7, 8, 9]).array
+                &Heap::<u8, _>::build_heap(vec![1, 2, 3, 4, 5, 6, 7, 8, 9]).array
             )); // 9 elements
 
             // Alternating high-low pattern
             assert!(Heap::is_heap(
-                &Heap::<u8>::build_heap(vec![10, 1, 9, 2, 8, 3, 7, 4, 6, 5]).array
+                &Heap::<u8, _>::build_heap(vec![10, 1, 9, 2, 8, 3, 7, 4, 6, 5]).array
             ));
 
             // All elements except one are the same
             assert!(Heap::is_heap(
-                &Heap::<u8>::build_heap(vec![5, 5, 5, 5, 5, 5, 5, 10, 5]).array
+                &Heap::<u8, _>::build_heap(vec![5, 5, 5, 5, 5, 5, 5, 10, 5]).array
             ));
             assert!(Heap::is_heap(
-                &Heap::<u8>::build_heap(vec![5, 5, 5, 5, 1, 5, 5, 5, 5]).array
+                &Heap::<u8, _>::build_heap(vec![5, 5, 5, 5, 1, 5, 5, 5, 5]).array
             ));
         }
         #[test]
         fn test_build_heap_with_different_types() {
             // Test with i32
             assert!(Heap::is_heap(
-                &Heap::<i32>::build_heap(vec![-1, 0, 1]).array
+                &Heap::<i32, _>::build_heap(vec![-1, 0, 1]).array
             ));
             assert!(Heap::is_heap(
-                &Heap::<i32>::build_heap(vec![i32::MIN, 0, i32::MAX]).array
+                &Heap::<i32, _>::build_heap(vec![i32::MIN, 0, i32::MAX]).array
             ));
 
             // Test with f64
-            assert!(Heap::is_heap(&Heap::<i32>::build_heap(vec![1, 2, 3]).array));
+            assert!(Heap::is_heap(
+                &Heap::<i32, _>::build_heap(vec![1, 2, 3]).array
+            ));
 
             // Test with char
             assert!(Heap::is_heap(
-                &Heap::<char>::build_heap(vec!['a', 'b', 'c']).array
+                &Heap::<char, _>::build_heap(vec!['a', 'b', 'c']).array
             ));
             assert!(Heap::is_heap(
-                &Heap::<char>::build_heap(vec!['z', 'a', 'm']).array
+                &Heap::<char, _>::build_heap(vec!['z', 'a', 'm']).array
             ));
         }
 
         #[test]
         fn test_build_heap_maintains_size() {
             let original = vec![3, 7, 1, 9, 2, 8, 4, 6, 5];
-            let heap = Heap::<u8>::build_heap(original.clone());
+            let heap = Heap::<u8, _>::build_heap(original.clone());
             assert_eq!(heap.array.len(), original.len() + 1);
 
             // Verify all elements are still present (heap property doesn't lose elements)
