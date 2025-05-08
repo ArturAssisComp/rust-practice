@@ -35,11 +35,11 @@ mod heap {
     mod sealed {
         pub trait HeapState {}
         pub struct Sorted;
-        pub struct NotSorted;
+        pub struct PriorityQueue;
         impl HeapState for Sorted {}
-        impl HeapState for NotSorted {}
+        impl HeapState for PriorityQueue {}
     }
-    use sealed::{HeapState, NotSorted, Sorted};
+    use sealed::{HeapState, PriorityQueue, Sorted};
 
     pub struct Heap<T: Default + PartialOrd + Copy + Display, S: HeapState> {
         state: PhantomData<S>,
@@ -47,7 +47,7 @@ mod heap {
         array: Vec<T>,
     }
 
-    impl<T: Default + PartialOrd + Copy + Display> Display for Heap<T, NotSorted> {
+    impl<T: Default + PartialOrd + Copy + Display> Display for Heap<T, PriorityQueue> {
         fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
             self.recursive_fmt(f, 1, &mut [false; MAX_LEVELS])
         }
@@ -70,9 +70,18 @@ mod heap {
         fn is_sorted(&self) -> bool {
             self.array[1..].is_sorted()
         }
+
+        fn priority_queue(self) -> Heap<T, PriorityQueue> {
+            let len = self.array.len();
+            let mut v = self.array;
+            exchange!(v, 0, len - 1);
+            // remove the dummy element
+            v.pop();
+            Heap::<T, PriorityQueue>::build_heap(v)
+        }
     }
 
-    impl<T: Default + PartialOrd + Copy + Display> Heap<T, NotSorted> {
+    impl<T: Default + PartialOrd + Copy + Display> Heap<T, PriorityQueue> {
         /// Prints the current part of the tree.
         ///
         /// # Arguments
@@ -120,7 +129,7 @@ mod heap {
             if l > self.size() {
                 return Ok(());
             }
-            let preffix = Heap::<T, NotSorted>::build_preffix(level, has_vertical_bar_arr);
+            let preffix = Heap::<T, PriorityQueue>::build_preffix(level, has_vertical_bar_arr);
             let r = right!(index);
             if r <= self.size() {
                 // ├─
@@ -133,6 +142,15 @@ mod heap {
             // └─2
             write!(f, "\n{preffix}└─")?;
             self.recursive_fmt(f, l, has_vertical_bar_arr)
+        }
+
+        fn max(&self) -> Option<T> {
+            self.array.get(1).copied()
+        }
+
+        // TODO implement extract-max
+        fn extract_max(&mut self) -> Option<T> {
+            todo!()
         }
 
         fn build_preffix(level: usize, has_vertical_bar_arr: &mut [bool; MAX_LEVELS]) -> String {
@@ -173,6 +191,15 @@ mod heap {
             }
         }
 
+        /// Sorts this heap.
+        ///
+        /// # Complexity
+        /// - Time: O(n.log(n))
+        /// - Space: O(1)
+        ///
+        /// # Caveats
+        /// After sorting, the heap may not be used anymore as priority
+        /// queue.
         pub fn heapsort(mut self) -> Heap<T, Sorted> {
             let mut length = self.size();
             // Remember: self.array = [dummy, e1, e2, ..., eLength]
@@ -502,7 +529,7 @@ mod heap {
         }
 
         #[test]
-        fn test_not_sorted_display() {
+        fn test_priority_queue_display() {
             //
             assert_eq!(Heap::build_heap(vec![10]).to_string(), "10");
             assert_eq!(
