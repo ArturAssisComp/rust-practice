@@ -23,6 +23,7 @@ mod heap {
         };
     }
 
+    /// Exchange the elements of index `i1` and `i2` from mutable slice `v`.
     macro_rules! exchange {
         ($v:ident, $i1:expr, $i2:expr) => {{
             let tmp = $v[$i1];
@@ -35,11 +36,10 @@ mod heap {
         pub trait HeapState {}
         pub struct Sorted;
         pub struct NotSorted;
+        impl HeapState for Sorted {}
+        impl HeapState for NotSorted {}
     }
     use sealed::{HeapState, NotSorted, Sorted};
-
-    impl HeapState for Sorted {}
-    impl HeapState for NotSorted {}
 
     pub struct Heap<T: Default + PartialOrd + Copy + Display, S: HeapState> {
         state: PhantomData<S>,
@@ -50,6 +50,25 @@ mod heap {
     impl<T: Default + PartialOrd + Copy + Display> Display for Heap<T, NotSorted> {
         fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
             self.recursive_fmt(f, 1, &mut [false; MAX_LEVELS])
+        }
+    }
+
+    impl<T: Default + PartialOrd + Copy + Display> Display for Heap<T, Sorted> {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            write!(f, "[")?;
+            if self.array.len() > 1 {
+                write!(f, "{}", self.array[1])?;
+                for e in self.array[2..].iter() {
+                    write!(f, ", {}", e)?;
+                }
+            }
+            write!(f, "]")
+        }
+    }
+
+    impl<T: Default + PartialOrd + Copy + Display> Heap<T, Sorted> {
+        fn is_sorted(&self) -> bool {
+            self.array[1..].is_sorted()
         }
     }
 
@@ -154,19 +173,21 @@ mod heap {
             }
         }
 
-        /*
-            pub fn heapsort(self)->Heap<T, Sorted> {
-                let mut length = self.size();
-
-                /*
-                while length >= 2 {
-
-
-                }
-                */
-
+        pub fn heapsort(mut self) -> Heap<T, Sorted> {
+            let mut length = self.size();
+            // Remember: self.array = [dummy, e1, e2, ..., eLength]
+            let v = &mut self.array[0..length + 1];
+            while length >= 2 {
+                exchange!(v, 1, length);
+                length -= 1;
+                // Obs: check the contract of heapfy
+                Heap::heapfy(&mut v[..length + 1], 1);
             }
-        */
+            Heap {
+                state: PhantomData::<Sorted>,
+                array: self.array,
+            }
+        }
 
         fn size(&self) -> usize {
             self.array.len() - 1
@@ -398,7 +419,90 @@ mod heap {
         test_heapfy!(test_heapfy, heapfy);
 
         #[test]
-        fn test_display() {
+        fn test_is_sorted() {
+            // empty
+            assert!(Heap::<char, _>::build_heap(vec![]).heapsort().is_sorted());
+            // 1 element
+            assert!(Heap::build_heap(vec!['a']).heapsort().is_sorted());
+            assert!(Heap::build_heap(vec![12]).heapsort().is_sorted());
+            // 2 elements
+            assert!(Heap::build_heap(vec![1, 1]).heapsort().is_sorted());
+            assert!(Heap::build_heap(vec![-1, 2]).heapsort().is_sorted());
+            assert!(Heap::build_heap(vec![2, -1]).heapsort().is_sorted());
+            // 3 elements
+            assert!(Heap::build_heap(vec![1, 2, 3]).heapsort().is_sorted());
+            assert!(Heap::build_heap(vec![1, 3, 2]).heapsort().is_sorted());
+            assert!(Heap::build_heap(vec![2, 1, 3]).heapsort().is_sorted());
+            assert!(Heap::build_heap(vec![2, 3, 1]).heapsort().is_sorted());
+            assert!(Heap::build_heap(vec![3, 1, 2]).heapsort().is_sorted());
+            assert!(Heap::build_heap(vec![3, 2, 1]).heapsort().is_sorted());
+
+            // 6 elements
+            assert!(Heap::build_heap(vec![2, -41, 23, -412, 34, -1234])
+                .heapsort()
+                .is_sorted());
+        }
+
+        #[test]
+        fn test_sorted_display() {
+            // empty
+            assert_eq!(
+                Heap::<char, _>::build_heap(vec![]).heapsort().to_string(),
+                "[]"
+            );
+            // 1 element
+            assert_eq!(Heap::build_heap(vec!['a']).heapsort().to_string(), "[a]");
+            assert_eq!(Heap::build_heap(vec![12]).heapsort().to_string(), "[12]");
+            // 2 elements
+            assert_eq!(
+                Heap::build_heap(vec![1, 1]).heapsort().to_string(),
+                "[1, 1]"
+            );
+            assert_eq!(
+                Heap::build_heap(vec![-1, 2]).heapsort().to_string(),
+                "[-1, 2]"
+            );
+            assert_eq!(
+                Heap::build_heap(vec![2, -1]).heapsort().to_string(),
+                "[-1, 2]"
+            );
+            // 3 elements
+            assert_eq!(
+                Heap::build_heap(vec![1, 2, 3]).heapsort().to_string(),
+                "[1, 2, 3]"
+            );
+            assert_eq!(
+                Heap::build_heap(vec![1, 3, 2]).heapsort().to_string(),
+                "[1, 2, 3]"
+            );
+            assert_eq!(
+                Heap::build_heap(vec![2, 1, 3]).heapsort().to_string(),
+                "[1, 2, 3]"
+            );
+            assert_eq!(
+                Heap::build_heap(vec![2, 3, 1]).heapsort().to_string(),
+                "[1, 2, 3]"
+            );
+            assert_eq!(
+                Heap::build_heap(vec![3, 1, 2]).heapsort().to_string(),
+                "[1, 2, 3]"
+            );
+            assert_eq!(
+                Heap::build_heap(vec![3, 2, 1]).heapsort().to_string(),
+                "[1, 2, 3]"
+            );
+
+            // 6 elements
+            assert_eq!(
+                Heap::build_heap(vec![2, -41, 23, -412, 34, -1234])
+                    .heapsort()
+                    .to_string(),
+                "[-1234, -412, -41, 2, 23, 34]"
+            );
+        }
+
+        #[test]
+        fn test_not_sorted_display() {
             //
             assert_eq!(Heap::build_heap(vec![10]).to_string(), "10");
             assert_eq!(
@@ -704,8 +808,8 @@ e
 use heap::Heap;
 
 fn main() {
-    println!(
-        "{}",
-        Heap::build_heap(vec![10, 4, 8, 3, 4, 6, 7, 1, 2, 1, -5, 0, 2, 1, 0])
-    );
+    let heap = Heap::build_heap(vec![10, 4, 8, 3, 4, 6, 7, 1, 2, 1, -5, 0, 2, 1, 0]);
+    println!("{heap}");
+    let sorted_array = heap.heapsort();
+    println!("{sorted_array}");
 }
