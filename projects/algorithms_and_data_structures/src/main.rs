@@ -25,7 +25,7 @@ mod heap {
 
     /// Exchange the elements of index `i1` and `i2` from mutable slice `v`.
     macro_rules! exchange {
-        ($v:ident, $i1:expr, $i2:expr) => {{
+        ($v:expr, $i1:expr, $i2:expr) => {{
             let tmp = $v[$i1];
             $v[$i1] = $v[$i2];
             $v[$i2] = tmp;
@@ -148,9 +148,42 @@ mod heap {
             self.array.get(1).copied()
         }
 
-        // TODO implement extract-max
+        /// Removes the max element from the priority queue.
+        ///
+        /// # Complexity
+        /// - Time: O(log(n))
+        /// - Space: O(1)
         fn extract_max(&mut self) -> Option<T> {
-            todo!()
+            let size = self.size();
+            if size == 0 {
+                return None;
+            }
+            exchange!(self.array, 1, size);
+            let max = self.array.pop();
+            Heap::heapfy(&mut self.array, 1);
+            max
+        }
+
+        /// Adds a new element to the priority queue.
+        ///
+        /// # Complexity
+        /// - Time: O(log(n))
+        /// - Space: O(1)
+        fn insert(&mut self, key: T) {
+            // add to the tail of the array
+            self.array.push(key);
+
+            let mut i = self.size();
+            if i == 1 {
+                return;
+            }
+            let mut parent = parent!(i);
+            while i > 1 && self.array[parent] < key {
+                self.array[i] = self.array[parent];
+                i = parent;
+                parent = parent!(i);
+            }
+            self.array[i] = key;
         }
 
         fn build_preffix(level: usize, has_vertical_bar_arr: &mut [bool; MAX_LEVELS]) -> String {
@@ -329,6 +362,7 @@ mod heap {
         }
     }
 
+    #[cfg(test)]
     mod test {
         use super::*;
 
@@ -444,6 +478,131 @@ mod heap {
 
         test_heapfy!(test_recursive_heapfy, recursive_heapfy);
         test_heapfy!(test_heapfy, heapfy);
+
+        mod test_insert {
+            use super::*;
+            use std::u8;
+
+            #[test]
+            fn should_insert_8_elements_into_an_empty_vec() {
+                let heap = &mut Heap::<u8, _>::build_heap(vec![]);
+                let dummy = u8::default();
+                assert_eq!(heap.array, vec![dummy]);
+                heap.insert(0);
+                assert_eq!(heap.array, vec![dummy, 0]);
+                heap.insert(2);
+                assert_eq!(heap.array, vec![dummy, 2, 0]);
+                heap.insert(4);
+                assert_eq!(heap.array, vec![dummy, 4, 0, 2]);
+                heap.insert(3);
+                assert_eq!(heap.array, vec![dummy, 4, 3, 2, 0]);
+                heap.insert(1);
+                assert_eq!(heap.array, vec![dummy, 4, 3, 2, 0, 1]);
+                heap.insert(6);
+                assert_eq!(heap.array, vec![dummy, 6, 3, 4, 0, 1, 2]);
+                heap.insert(5);
+                assert_eq!(heap.array, vec![dummy, 6, 3, 5, 0, 1, 2, 4]);
+                heap.insert(100);
+                assert_eq!(heap.array, vec![dummy, 100, 6, 5, 3, 1, 2, 4, 0]);
+            }
+
+            #[test]
+            fn should_insert_4_repeated_elements_into_an_empty_vec() {
+                let heap = &mut Heap::<u8, _>::build_heap(vec![]);
+                let dummy = u8::default();
+                assert_eq!(heap.array, vec![dummy]);
+                heap.insert(2);
+                assert_eq!(heap.array, vec![dummy, 2]);
+                heap.insert(2);
+                assert_eq!(heap.array, vec![dummy, 2, 2]);
+                heap.insert(2);
+                assert_eq!(heap.array, vec![dummy, 2, 2, 2]);
+                heap.insert(2);
+                assert_eq!(heap.array, vec![dummy, 2, 2, 2, 2]);
+            }
+
+            #[test]
+            fn should_insert_2_element_into_a_vec() {
+                let heap = &mut Heap::<u8, _>::build_heap(vec![1, 2, 3]);
+                let dummy = u8::default();
+                assert_eq!(heap.array, vec![dummy, 3, 2, 1]);
+                heap.insert(2);
+                assert_eq!(heap.array, vec![dummy, 3, 2, 1, 2]);
+                heap.insert(8);
+                assert_eq!(heap.array, vec![dummy, 8, 3, 1, 2, 2]);
+            }
+        }
+
+        mod test_extract_max {
+            use super::*;
+            #[test]
+            fn should_extract_empty() {
+                let heap = &mut Heap::<u8, _>::build_heap(vec![]);
+                assert_eq!(heap.extract_max(), None);
+                assert_eq!(heap.extract_max(), None);
+            }
+
+            #[test]
+            fn should_extract_one_element() {
+                let heap = &mut Heap::build_heap(vec!['9']);
+                assert_eq!(heap.extract_max(), Some('9'));
+                assert_eq!(heap.extract_max(), None);
+                assert_eq!(heap.extract_max(), None);
+            }
+            #[test]
+            fn should_extract_two_elements() {
+                let heap = &mut Heap::build_heap(vec![1, 2]);
+                assert_eq!(heap.extract_max(), Some(2));
+                assert_eq!(heap.extract_max(), Some(1));
+                assert_eq!(heap.extract_max(), None);
+                assert_eq!(heap.extract_max(), None);
+            }
+            #[test]
+            fn should_extract_three_elements() {
+                let heap = &mut Heap::build_heap(vec![43, 3847, -234]);
+                assert_eq!(heap.extract_max(), Some(3847));
+                assert_eq!(heap.extract_max(), Some(43));
+                assert_eq!(heap.extract_max(), Some(-234));
+                assert_eq!(heap.extract_max(), None);
+                assert_eq!(heap.extract_max(), None);
+            }
+            #[test]
+            fn should_extract_10_elements() {
+                let heap = &mut Heap::build_heap(vec![9, 4, 2, 3, 4, 6, 7, 8, 0, -2]);
+                assert_eq!(heap.extract_max(), Some(9));
+                assert_eq!(heap.extract_max(), Some(8));
+                assert_eq!(heap.extract_max(), Some(7));
+                assert_eq!(heap.extract_max(), Some(6));
+                assert_eq!(heap.extract_max(), Some(4));
+                assert_eq!(heap.extract_max(), Some(4));
+                assert_eq!(heap.extract_max(), Some(3));
+                assert_eq!(heap.extract_max(), Some(2));
+                assert_eq!(heap.extract_max(), Some(0));
+                assert_eq!(heap.extract_max(), Some(-2));
+                assert_eq!(heap.extract_max(), None);
+                assert_eq!(heap.extract_max(), None);
+            }
+            #[test]
+            fn should_extract_4_repeated_elements() {
+                let heap = &mut Heap::build_heap(Vec::from(["Hello"; 4]));
+                assert_eq!(heap.extract_max(), Some("Hello"));
+                assert_eq!(heap.extract_max(), Some("Hello"));
+                assert_eq!(heap.extract_max(), Some("Hello"));
+                assert_eq!(heap.extract_max(), Some("Hello"));
+                assert_eq!(heap.extract_max(), None);
+                assert_eq!(heap.extract_max(), None);
+            }
+            #[test]
+            fn should_extract_100_elements() {
+                let size = 100;
+                let heap = &mut Heap::build_heap((1..=size).collect());
+                for i in (1..=size).rev() {
+                    assert_eq!(heap.extract_max(), Some(i));
+                }
+                assert_eq!(heap.extract_max(), None);
+                assert_eq!(heap.extract_max(), None);
+            }
+        }
 
         #[test]
         fn test_is_sorted() {
