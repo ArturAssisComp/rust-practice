@@ -164,6 +164,30 @@ mod heap {
             max
         }
 
+        /// Replace the current value of the `i`-th element of the heap with `new_value`
+        /// if the latter is greater than the former.
+        ///
+        /// # Caveats
+        /// - `i` must be within the range `[1, self.size()]`
+        fn replace_if_greater(&mut self, i: usize, new_value: T) -> Result<(), &'static str> {
+            if i == 0 || i > self.size() {
+                return Err("i must be in range [1, self.size()]");
+            }
+            if new_value <= self.array[i] {
+                return Ok(());
+            }
+            let mut i = i;
+            let mut parent = parent!(i);
+
+            while i > 1 && self.array[parent] < new_value {
+                self.array[i] = self.array[parent];
+                i = parent;
+                parent = parent!(i);
+            }
+            self.array[i] = new_value;
+            Ok(())
+        }
+
         /// Adds a new element to the priority queue.
         ///
         /// # Complexity
@@ -479,6 +503,63 @@ mod heap {
         test_heapfy!(test_recursive_heapfy, recursive_heapfy);
         test_heapfy!(test_heapfy, heapfy);
 
+        mod test_replace_if_greater {
+            use super::*;
+
+            #[test]
+            fn should_return_error_when_replacing_out_of_bounds() {
+                assert!(Heap::build_heap(vec![]).replace_if_greater(1, 12).is_err());
+                assert!(Heap::build_heap(vec![]).replace_if_greater(0, 12).is_err());
+                assert!(Heap::build_heap(vec![1, 2, 3])
+                    .replace_if_greater(0, 100)
+                    .is_err());
+                assert!(Heap::build_heap(vec![1, 2, 3])
+                    .replace_if_greater(4, 100)
+                    .is_err());
+            }
+
+            #[test]
+            fn should_replace_size_1_array_element() {
+                let heap = &mut Heap::build_heap(vec![10]);
+                assert!(heap.replace_if_greater(1, 12).is_ok());
+                let dummy = i32::default();
+                assert_eq!(heap.array, vec![dummy, 12]);
+
+                assert!(heap.replace_if_greater(1, 12).is_ok());
+                assert_eq!(heap.array, vec![dummy, 12]);
+
+                assert!(heap.replace_if_greater(1, -12).is_ok());
+                assert_eq!(heap.array, vec![dummy, 12]);
+            }
+
+            #[test]
+            fn should_replace_size_2_array_element() {
+                let heap = &mut Heap::build_heap(vec![1, 9]);
+                assert!(heap.replace_if_greater(2, 2).is_ok());
+                let dummy = i32::default();
+                assert_eq!(heap.array, vec![dummy, 9, 2]);
+
+                assert!(heap.replace_if_greater(2, 3).is_ok());
+                assert_eq!(heap.array, vec![dummy, 9, 3]);
+
+                assert!(heap.replace_if_greater(2, 100).is_ok());
+                assert_eq!(heap.array, vec![dummy, 100, 9]);
+
+                assert!(heap.replace_if_greater(1, 101).is_ok());
+                assert_eq!(heap.array, vec![dummy, 101, 9]);
+            }
+
+            #[test]
+            fn should_replace_size_5_array_element() {
+                let heap = &mut Heap::build_heap(vec![12.3, 8.4, 6.7, 8.4, -23.0]);
+                assert!(heap.replace_if_greater(4, 23.0).is_ok());
+                let dummy = f64::default();
+                assert_eq!(heap.array, vec![dummy, 23.0, 12.3, 6.7, 8.4, -23.0]);
+
+                assert!(heap.replace_if_greater(1, 23.009).is_ok());
+                assert_eq!(heap.array, vec![dummy, 23.009, 12.3, 6.7, 8.4, -23.0]);
+            }
+        }
         mod test_insert {
             use super::*;
             use std::u8;
