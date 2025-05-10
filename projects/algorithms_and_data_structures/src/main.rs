@@ -2,8 +2,8 @@ const MAX_LEVELS: usize = 100;
 
 mod heap {
     use crate::MAX_LEVELS;
-    use std::fmt::Display;
     use std::marker::PhantomData;
+    use std::{fmt::Display, str};
 
     macro_rules! parent {
         ($i:expr) => {
@@ -71,7 +71,7 @@ mod heap {
             self.array[1..].is_sorted()
         }
 
-        fn priority_queue(self) -> Heap<T, PriorityQueue> {
+        pub fn priority_queue(self) -> Heap<T, PriorityQueue> {
             let len = self.array.len();
             let mut v = self.array;
             exchange!(v, 0, len - 1);
@@ -144,7 +144,7 @@ mod heap {
             self.recursive_fmt(f, l, has_vertical_bar_arr)
         }
 
-        fn max(&self) -> Option<T> {
+        pub fn max(&self) -> Option<T> {
             self.array.get(1).copied()
         }
 
@@ -153,7 +153,7 @@ mod heap {
         /// # Complexity
         /// - Time: O(log(n))
         /// - Space: O(1)
-        fn extract_max(&mut self) -> Option<T> {
+        pub fn extract_max(&mut self) -> Option<T> {
             let size = self.size();
             if size == 0 {
                 return None;
@@ -164,12 +164,34 @@ mod heap {
             max
         }
 
+        /// Deletes the `i`-th element from this heap and return its value.
+        ///
+        /// # Error
+        /// If `i` is out of range, an error is returned.
+        pub fn delete(&mut self, i: usize) -> Result<T, &'static str> {
+            let size = self.size();
+            if i == 0 || i > size {
+                return Err("'i' is out of range. I must be in the range [1, self.size()]");
+            }
+            if i != size {
+                exchange!(self.array, i, size);
+            }
+            let deleted_value = self
+                .array
+                .pop()
+                .expect("at this point, it is guaranteed that self.array has at least 2 element");
+
+            Heap::heapfy(&mut self.array, i);
+
+            Ok(deleted_value)
+        }
+
         /// Replace the current value of the `i`-th element of the heap with `new_value`
         /// if the latter is greater than the former.
         ///
         /// # Caveats
         /// - `i` must be within the range `[1, self.size()]`
-        fn replace_if_greater(&mut self, i: usize, new_value: T) -> Result<(), &'static str> {
+        pub fn replace_if_greater(&mut self, i: usize, new_value: T) -> Result<(), &'static str> {
             if i == 0 || i > self.size() {
                 return Err("i must be in range [1, self.size()]");
             }
@@ -193,7 +215,7 @@ mod heap {
         /// # Complexity
         /// - Time: O(log(n))
         /// - Space: O(1)
-        fn insert(&mut self, key: T) {
+        pub fn insert(&mut self, key: T) {
             // add to the tail of the array
             self.array.push(key);
 
@@ -273,7 +295,7 @@ mod heap {
             }
         }
 
-        fn size(&self) -> usize {
+        pub fn size(&self) -> usize {
             self.array.len() - 1
         }
 
@@ -502,6 +524,72 @@ mod heap {
 
         test_heapfy!(test_recursive_heapfy, recursive_heapfy);
         test_heapfy!(test_heapfy, heapfy);
+
+        mod test_delete {
+            use super::*;
+
+            #[test]
+            fn should_return_error_when_i_out_of_range() {
+                assert!(Heap::<u8, _>::build_heap(vec![]).delete(0).is_err());
+                assert!(Heap::<u8, _>::build_heap(vec![]).delete(1).is_err());
+                assert!(Heap::<u8, _>::build_heap(vec![]).delete(5).is_err());
+
+                assert!(Heap::build_heap(vec![12]).delete(2).is_err());
+                assert!(Heap::build_heap(vec![1, 2, 3]).delete(4).is_err());
+                assert!(Heap::build_heap(vec![1, 2, 3]).delete(0).is_err());
+            }
+
+            #[test]
+            fn should_delete_element_from_size_1_vec() {
+                let heap = &mut Heap::build_heap(vec![120]);
+
+                assert_eq!(heap.delete(1), Ok(120));
+                let dummy = i32::default();
+
+                assert_eq!(heap.array, vec![dummy]);
+            }
+            #[test]
+            fn should_delete_element_from_size_2_vec() {
+                let dummy = char::default();
+                let heap1 = &mut Heap::build_heap(vec!['b', 'a']);
+
+                assert_eq!(heap1.delete(1), Ok('b'));
+
+                assert_eq!(heap1.array, vec![dummy, 'a']);
+
+                assert_eq!(heap1.delete(1), Ok('a'));
+
+                assert_eq!(heap1.array, vec![dummy]);
+
+                let heap2 = &mut Heap::build_heap(vec!['b', 'a']);
+
+                assert_eq!(heap2.delete(2), Ok('a'));
+
+                assert_eq!(heap2.array, vec![dummy, 'b']);
+            }
+
+            #[test]
+            fn should_delete_element_from_size_5_vec() {
+                let dummy = i32::default();
+                let heap = &mut Heap::build_heap(vec![55, 44, 43, 43, -23]);
+
+                assert_eq!(heap.delete(1), Ok(55));
+
+                assert_eq!(heap.array, vec![dummy, 44, 43, 43, -23]);
+
+                assert_eq!(heap.delete(2), Ok(43));
+                assert_eq!(heap.array, vec![dummy, 44, -23, 43]);
+
+                assert_eq!(heap.delete(1), Ok(44));
+                assert_eq!(heap.array, vec![dummy, 43, -23]);
+
+                assert_eq!(heap.delete(2), Ok(-23));
+                assert_eq!(heap.array, vec![dummy, 43]);
+
+                assert_eq!(heap.delete(1), Ok(43));
+                assert_eq!(heap.array, vec![dummy]);
+            }
+        }
 
         mod test_replace_if_greater {
             use super::*;
