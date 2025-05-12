@@ -186,6 +186,38 @@ mod heap {
             Ok(deleted_value)
         }
 
+        /// Replace the heap element of index `i` with `new_value`. If `i` is out of index
+        /// bounds, it returns an error.
+        pub fn replace(&mut self, i: usize, new_value: T) -> Result<(), &'static str> {
+            if i == 0 || i > self.size() {
+                return Err("i must be in range [1, self.size()]");
+            }
+            if new_value < self.array[i] {
+                self.array[i] = new_value;
+                Heap::heapfy(&mut self.array[..], i);
+                return Ok(());
+            }
+            // replace if greater
+            if new_value == self.array[i] {
+                return Ok(());
+            }
+
+            if self.size() == 1 {
+                self.array[i] = new_value;
+                return Ok(());
+            }
+
+            let mut i = i;
+            let mut parent = parent!(i);
+            while i > 1 && self.array[parent] < new_value {
+                self.array[i] = self.array[parent];
+                i = parent;
+                parent = parent!(i);
+            }
+            self.array[i] = new_value;
+            Ok(())
+        }
+
         /// Replace the current value of the `i`-th element of the heap with `new_value`
         /// if the latter is greater than the former.
         ///
@@ -299,8 +331,8 @@ mod heap {
             self.array.len() - 1
         }
 
-        /// This utility is used to restore the heap property of heap subtree v[i..] given
-        /// that the subtrees: left(i) and right(i) is already heap.
+        /// This utility is used to restore the heap property of heap subtree `v[i..]`
+        /// given that the subtrees: left(i) and right(i) is already heap.
         ///
         /// # Complexity
         /// - Time: O(log(v.len()))
@@ -308,8 +340,8 @@ mod heap {
         ///
         /// # Contract
         /// - C1: It is expected that the element with index 0 is a dummy element. The
-        /// actual values of the heap will start from v[1..].
-        /// - C2: i <= v.len() - 1
+        /// actual values of the heap will start from `v[1..]`.
+        /// - C2: `i <= v.len() - 1`
         fn heapfy(v: &mut [T], i: usize) {
             let v_size = v.len() - 1;
             let mut i = i;
@@ -591,6 +623,62 @@ mod heap {
             }
         }
 
+        mod test_replace {
+            use super::*;
+
+            #[test]
+            fn should_return_error_when_replacing_out_of_bounds() {
+                assert!(Heap::build_heap(vec![]).replace(1, 12).is_err());
+                assert!(Heap::build_heap(vec![]).replace(0, 12).is_err());
+                assert!(Heap::build_heap(vec![1, 2, 3]).replace(0, 100).is_err());
+                assert!(Heap::build_heap(vec![1, 2, 3]).replace(4, 100).is_err());
+            }
+
+            #[test]
+            fn should_replace_size_1_array_element() {
+                let heap = &mut Heap::build_heap(vec![10]);
+                assert!(heap.replace(1, 12).is_ok());
+                let dummy = i32::default();
+                assert_eq!(heap.array, vec![dummy, 12]);
+
+                assert!(heap.replace(1, 12).is_ok());
+                assert_eq!(heap.array, vec![dummy, 12]);
+
+                assert!(heap.replace(1, -12).is_ok());
+                assert_eq!(heap.array, vec![dummy, -12]);
+            }
+
+            #[test]
+            fn should_replace_size_2_array_element() {
+                let heap = &mut Heap::build_heap(vec![1, 9]);
+                assert!(heap.replace(2, 2).is_ok());
+                let dummy = i32::default();
+                assert_eq!(heap.array, vec![dummy, 9, 2]);
+
+                assert!(heap.replace(2, 3).is_ok());
+                assert_eq!(heap.array, vec![dummy, 9, 3]);
+
+                assert!(heap.replace(2, 100).is_ok());
+                assert_eq!(heap.array, vec![dummy, 100, 9]);
+
+                assert!(heap.replace(1, 101).is_ok());
+                assert_eq!(heap.array, vec![dummy, 101, 9]);
+
+                assert!(heap.replace(1, -1000).is_ok());
+                assert_eq!(heap.array, vec![dummy, 9, -1000]);
+            }
+
+            #[test]
+            fn should_replace_size_5_array_element() {
+                let heap = &mut Heap::build_heap(vec![12.3, 8.4, 6.7, 8.4, -23.0]);
+                assert!(heap.replace(4, 23.0).is_ok());
+                let dummy = f64::default();
+                assert_eq!(heap.array, vec![dummy, 23.0, 12.3, 6.7, 8.4, -23.0]);
+
+                assert!(heap.replace(1, 23.009).is_ok());
+                assert_eq!(heap.array, vec![dummy, 23.009, 12.3, 6.7, 8.4, -23.0]);
+            }
+        }
         mod test_replace_if_greater {
             use super::*;
 
