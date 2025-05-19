@@ -1,4 +1,4 @@
-use crate::MAX_LEVELS;
+use crate::{exchange, MAX_LEVELS};
 use std::marker::PhantomData;
 use std::{fmt::Display, str};
 
@@ -18,15 +18,6 @@ macro_rules! right {
     ($i:expr) => {
         ($i << 1) + 1
     };
-}
-
-/// Exchange the elements of index `i1` and `i2` from mutable slice `v`.
-macro_rules! exchange {
-    ($v:expr, $i1:expr, $i2:expr) => {{
-        let tmp = $v[$i1];
-        $v[$i1] = $v[$i2];
-        $v[$i2] = tmp;
-    }};
 }
 
 // states of the heap
@@ -75,6 +66,7 @@ where
     pub fn priority_queue(self) -> Heap<T, PriorityQueue> {
         let len = self.array.len();
         let mut v = self.array;
+
         exchange!(v, 0, len - 1);
         // remove the dummy element
         v.pop();
