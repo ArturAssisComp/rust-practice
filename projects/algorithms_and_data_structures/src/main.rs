@@ -9,6 +9,9 @@ mod d_ary_heap {
     /// Given the current index in the array (from 0 to len()-1), this macro returns the
     /// range for all `degree` children that a d-ary heap element may have.
     ///
+    /// # Patterns
+    /// - ($i:expr, $degree:expr)=>range
+    ///
     /// # Example
     /// ```rust
     /// // Remember that the range is left-inclusive and right-exclusive.
@@ -22,7 +25,19 @@ mod d_ary_heap {
         }};
     }
 
-    // TODO test and comment
+    /// Given the current index in the array (from 0 to len()-1), this macro returns the
+    /// parent's index that a d-ary heap element may have.
+    ///
+    /// # Patterns
+    /// - ($i:expr, $degree:expr)=>parent's index
+    ///
+    /// # Example
+    /// ```rust
+    /// assert_eq!(children_range!(1, 2), 0);
+    ///
+    /// assert_eq!(children_range!(3, 3), 0);
+    /// assert_eq!(children_range!(4, 3), 1);
+    /// ```
     macro_rules! parent {
         ($i:expr, $degree:expr) => {
             ($i - 1) / $degree
@@ -55,7 +70,51 @@ mod d_ary_heap {
 
     #[cfg(test)]
     mod tests {
-        use super::*;
+
+        mod test_macro_parent {
+            #[test]
+            fn should_return_parent_index_for_degree_1() {
+                let degree = 1;
+                assert_eq!(parent!(1, degree), 0);
+                assert_eq!(parent!(2, degree), 1);
+                assert_eq!(parent!(3, degree), 2);
+                assert_eq!(parent!(4, degree), 3);
+            }
+
+            #[test]
+            fn should_return_parent_index_for_degree_2() {
+                let degree = 2;
+                assert_eq!(parent!(1, degree), 0);
+                assert_eq!(parent!(2, degree), 0);
+                assert_eq!(parent!(3, degree), 1);
+                assert_eq!(parent!(4, degree), 1);
+                assert_eq!(parent!(5, degree), 2);
+            }
+
+            #[test]
+            fn should_return_parent_index_for_degree_3() {
+                let degree = 3;
+                assert_eq!(parent!(1, degree), 0);
+                assert_eq!(parent!(2, degree), 0);
+                assert_eq!(parent!(3, degree), 0);
+                assert_eq!(parent!(4, degree), 1);
+                assert_eq!(parent!(5, degree), 1);
+                assert_eq!(parent!(7, degree), 2);
+            }
+
+            #[test]
+            fn should_return_parent_index_for_degree_10() {
+                let degree = 10;
+                assert_eq!(parent!(1, degree), 0);
+                assert_eq!(parent!(2, degree), 0);
+                assert_eq!(parent!(3, degree), 0);
+                assert_eq!(parent!(4, degree), 0);
+                assert_eq!(parent!(10, degree), 0);
+                assert_eq!(parent!(11, degree), 1);
+                assert_eq!(parent!(20, degree), 1);
+                assert_eq!(parent!(21, degree), 2);
+            }
+        }
 
         mod test_macro_children_range {
             #[test]
