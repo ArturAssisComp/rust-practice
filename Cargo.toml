@@ -12,5 +12,7 @@ members = [ "projects/complex",
     "projects/slog_demo", 
     "projects/minigrep", 
     "projects/web_server", 
-    "projects/command-line-rust-book/chap1", "projects/algorithms_and_data_structures",
+    "projects/command-line-rust-book/chap1", 
+    "projects/algorithms_and_data_structures", 
+    "projects/specific_topics",
 ]
