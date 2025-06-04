@@ -10,6 +10,8 @@ mod d_ary_heap;
 
 mod quicksort;
 
+mod random;
+
 use d_ary_heap::DAryHeap;
 use heap::Heap;
 use quicksort::{quicksort_ineficient, Order};
