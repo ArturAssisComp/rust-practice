@@ -1,3 +1,4 @@
+use crate::exchange;
 use rand::Rng;
 use serial_test::serial;
 
@@ -75,6 +76,21 @@ pub fn toss_coin_random_d_ary(
     }
 }
 
+pub fn permute<T: Copy>(arr: &mut [T]) {
+    if arr.len() <= 1 {
+        return;
+    }
+    let mut r = rand::rng();
+
+    let end = arr.len() - 1;
+
+    let mut j;
+    for i in 0..arr.len() - 2 {
+        j = r.random_range(i..end);
+        exchange!(arr, i, j);
+    }
+}
+
 #[cfg(test)]
 #[serial]
 mod test {
@@ -116,6 +132,86 @@ mod test {
             ans
         }
         predetermined_toss_coin
+    }
+
+    mod test_permute {
+
+        use super::*;
+        use std::collections::HashMap;
+        use std::hash::Hash;
+
+        fn get_element_count_hash_map<T>(arr: &[T]) -> HashMap<T, usize>
+        where
+            T: Copy + Eq + Hash,
+        {
+            let mut answer = HashMap::new();
+            for el in arr {
+                match answer.get_mut(el) {
+                    Some(v) => *v += 1,
+                    None => {
+                        answer.insert(*el, 1_usize);
+                    }
+                }
+            }
+            answer
+        }
+
+        #[test]
+        fn should_permute_an_empty_array() {
+            let mut arr: [usize; 0] = [];
+            permute(&mut arr);
+            assert_eq!(arr, []);
+        }
+
+        #[test]
+        fn should_permute_an_1_element_array() {
+            let mut arr = [10];
+            permute(&mut arr);
+            assert_eq!(arr, [10]);
+        }
+        macro_rules! test_permutation {
+            ($arr:expr, $expected_count:expr) => {
+                permute(&mut $arr);
+                assert_eq!(
+                    get_element_count_hash_map(&$arr),
+                    HashMap::from_iter($expected_count)
+                );
+            };
+        }
+
+        #[test]
+        fn should_permute_a_2_element_array() {
+            test_permutation!([10, 12_u32], [(10, 1), (12, 1)]);
+        }
+        #[test]
+        fn should_permute_a_3_element_array() {
+            test_permutation!(["", "hey", "there"], [("", 1), ("hey", 1), ("there", 1)]);
+            test_permutation!([1, 2, 3], [(1, 1), (2, 1), (3, 1)]);
+            test_permutation!([1, 2, 2], [(1, 1), (2, 2)]);
+            test_permutation!([2, 2, 2], [(2, 3)]);
+        }
+
+        #[test]
+        fn should_permute_a_7_element_array() {
+            test_permutation!(
+                [1, 2, 2, 3, 4, 5, 5],
+                [(1, 1), (2, 2), (3, 1), (4, 1), (5, 2)]
+            );
+        }
+        #[test]
+        fn should_permute_a_large_array_changing_at_least_one_element() {
+            let arr = [
+                23, 2, 23, 1, 2, 31, 23, 12, 3, 12, 31, 23, 12312, 312, 3, 1, 24, 5546,
+            ];
+            let mut permuted_array = arr.clone();
+            while arr == permuted_array {
+                permute(&mut permuted_array);
+            }
+            assert_eq!(
+                get_element_count_hash_map(&permuted_array),
+                get_element_count_hash_map(&arr)
+            );
+        }
     }
 
     mod test_toss_coin_random {
