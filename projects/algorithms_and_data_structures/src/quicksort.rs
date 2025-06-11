@@ -1,4 +1,5 @@
 use rand::Rng;
+use std::fmt::Debug;
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum Order {
@@ -7,6 +8,12 @@ pub enum Order {
 }
 
 impl Order {
+    const fn get_is_not_sorted<T: PartialOrd>(&self) -> impl Fn(T, T) -> bool {
+        match self {
+            Order::Increasing => |first, second| first > second,
+            Order::Decreasing => |first, second| first < second,
+        }
+    }
     const fn get_left_cmp<T: PartialOrd>(&self) -> impl Fn(T, T) -> bool {
         match self {
             Order::Increasing => |first, second| first < second,
@@ -110,8 +117,135 @@ pub fn quicksort_ineficient_random_partition<T: PartialOrd + Copy>(
     exchange!(arr, start, random);
     let q = first_element_partition(arr, left, right, order);
 
-    quicksort_ineficient(arr, start, q, order);
-    quicksort_ineficient(arr, q, end, order);
+    quicksort_ineficient_random_partition(arr, start, q, order);
+    quicksort_ineficient_random_partition(arr, q, end, order);
+}
+
+/// [  a1     a2 ... an]
+///    ^                 ^
+///    |                 |
+/// <start>            <end>
+///
+/// # Contract
+/// - `end` <= arr.len()
+/// - `start` < arr.len()
+pub fn quicksort_efficient_random_partition<T>(
+    arr: &mut [T],
+    start: usize,
+    end: usize,
+    order: Order,
+) where
+    T: PartialOrd + Copy + Debug,
+{
+    if start + 1 >= end {
+        return;
+    }
+
+    let mut left = start;
+    let mut right = end - 1;
+    let mut left_len;
+    let mut right_len;
+    let mut rng = rand::rng();
+
+    while left < right {
+        let random = rng.random_range(left..right + 1);
+        exchange!(arr, left, random);
+        let q = first_element_partition(arr, left, right, order);
+        left_len = q - left;
+        right_len = right + 1 - q;
+
+        if left_len <= right_len {
+            quicksort_efficient_random_partition(arr, left, q, order);
+            left = q;
+        } else {
+            quicksort_efficient_random_partition(arr, q, right + 1, order);
+            right = q - 1;
+        }
+    }
+}
+
+/// [  a1     a2 ... an]
+///    ^                 ^
+///    |                 |
+/// <start>            <end>
+///
+///
+/// # Contract
+/// - `end` <= arr.len()
+/// - `start` < arr.len()
+pub fn quicksort<T: PartialOrd + Copy>(arr: &mut [T], start: usize, end: usize, order: Order) {
+    const INSERTION_SORT_FACTOR: usize = 100;
+    //const INSERTION_SORT_FACTOR: usize = 1;
+    quicksort_efficient(arr, start, end, INSERTION_SORT_FACTOR, order);
+    insertion_sort(arr, start, end, order);
+}
+
+/// [  a1     a2 ... an]
+///    ^                 ^
+///    |                 |
+/// <start>            <end>
+///
+/// # Arguments
+/// - `insertion_sort_factor`: when `end - start <= insertion_sort_factor`, the algorithm
+/// stops calling itself recursively.
+///
+/// # Contract
+/// - `end` <= arr.len()
+/// - `start` < arr.len()
+fn quicksort_efficient<T: PartialOrd + Copy>(
+    arr: &mut [T],
+    start: usize,
+    end: usize,
+    insertion_sort_factor: usize,
+    order: Order,
+) {
+    if start + 1 >= end {
+        return;
+    }
+    let mut left = start;
+    let mut right = end - 1;
+    let mut left_len;
+    let mut right_len;
+    let mut rng = rand::rng();
+    loop {
+        if right - left + 1 <= insertion_sort_factor {
+            return;
+        }
+        let random = rng.random_range(left..right + 1);
+        exchange!(arr, left, random);
+        let q = first_element_partition(arr, left, right, order);
+
+        left_len = q - left;
+        right_len = right + 1 - q;
+
+        if left_len <= right_len {
+            quicksort_efficient(arr, left, q, insertion_sort_factor, order);
+            left = q;
+        } else {
+            quicksort_efficient(arr, q, right + 1, insertion_sort_factor, order);
+            right = q - 1;
+        }
+    }
+}
+
+fn insertion_sort<T: PartialOrd + Copy>(arr: &mut [T], start: usize, end: usize, order: Order) {
+    // start < end - 1
+    if start + 1 >= end {
+        return;
+    }
+    let is_not_sorted = order.get_is_not_sorted();
+    let mut i;
+    let mut i_minus_1;
+    for last_sorted_index in (start + 1)..end {
+        i = last_sorted_index;
+        let last_element = arr[i];
+        while i > start && is_not_sorted(arr[i - 1], last_element) {
+            i_minus_1 = i - 1;
+            arr[i] = arr[i_minus_1];
+            i = i_minus_1;
+        }
+        arr[i] = last_element;
+    }
 }
 
 #[cfg(test)]
@@ -289,9 +423,15 @@ mod test {
             }
         };
     }
+    test_quicksort!(test_insertion_sort, insertion_sort);
+    test_quicksort!(test_efficient_quicksort, quicksort);
     test_quicksort!(test_quicksort_ineficient, quicksort_ineficient);
     test_quicksort!(
         test_quicksort_ineficient_random_partition,
         quicksort_ineficient_random_partition
+    );
+    test_quicksort!(
+        test_quicksort_efficient_random_partition,
+        quicksort_efficient_random_partition
     );
 }
