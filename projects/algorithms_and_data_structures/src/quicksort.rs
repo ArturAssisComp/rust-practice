@@ -1,4 +1,4 @@
-use rand::Rng;
+use rand::{rngs::ThreadRng, Rng};
 use std::fmt::Debug;
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
@@ -113,7 +113,7 @@ pub fn quicksort_ineficient_random_partition<T: PartialOrd + Copy>(
     let left = start;
     let right = end - 1;
     let mut rng = rand::rng();
-    let random = rng.random_range(start..end);
+    let random = median_of_3(&mut rng, arr, left, right);
     exchange!(arr, start, random);
     let q = first_element_partition(arr, left, right, order);
 
@@ -148,7 +148,7 @@ pub fn quicksort_efficient_random_partition<T>(
     let mut rng = rand::rng();
 
     while left < right {
-        let random = rng.random_range(left..right + 1);
+        let random = median_of_3(&mut rng, arr, left, right);
         exchange!(arr, left, random);
         let q = first_element_partition(arr, left, right, order);
         left_len = q - left;
@@ -178,6 +178,44 @@ pub fn quicksort<T: PartialOrd + Copy>(arr: &mut [T], start: usize, end: usize, 
     //const INSERTION_SORT_FACTOR: usize = 1;
     quicksort_efficient(arr, start, end, INSERTION_SORT_FACTOR, order);
     insertion_sort(arr, start, end, order);
+}
+
+fn median_of_3<T: PartialOrd + Copy>(
+    rng: &mut ThreadRng,
+    arr: &mut [T],
+    left: usize,
+    right: usize,
+) -> usize {
+    let i1 = rng.random_range(left..right + 1);
+    let i2 = rng.random_range(left..right + 1);
+    let i3 = rng.random_range(left..right + 1);
+    let el1 = arr[i1];
+    let el2 = arr[i2];
+    let el3 = arr[i3];
+    if el1 <= el2 {
+        // 1 2
+        if el2 <= el3 {
+            // 1 2 3
+            return i2;
+        }
+        if el1 <= el3 {
+            // 1  3  2
+            return i3;
+        }
+        // 3  1  2
+        return i1;
+    }
+    // 2 1
+    if el1 <= el3 {
+        // 2 1 3
+        return i1;
+    }
+    if el2 <= el3 {
+        // 2 3 1
+        return i3;
+    }
+    // 3 2 1
+    i2
 }
 
 /// [  a1     a2 ... an]
@@ -211,7 +249,7 @@ fn quicksort_efficient<T: PartialOrd + Copy>(
         if right - left + 1 <= insertion_sort_factor {
             return;
         }
-        let random = rng.random_range(left..right + 1);
+        let random = median_of_3(&mut rng, arr, left, right);
         exchange!(arr, left, random);
         let q = first_element_partition(arr, left, right, order);
 
