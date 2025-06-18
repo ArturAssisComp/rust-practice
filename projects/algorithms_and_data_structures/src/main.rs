@@ -12,8 +12,8 @@ mod quicksort;
 
 mod random;
 
-use d_ary_heap::DAryHeap;
-use heap::Heap;
+mod min_max;
+
 use quicksort::{quicksort_ineficient, Order};
 
 fn main() {
