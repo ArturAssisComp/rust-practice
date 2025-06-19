@@ -1,5 +1,7 @@
 const MAX_LEVELS: usize = 100;
 
+mod binary_add;
+
 mod heap;
 
 mod merge_sorted_list;
