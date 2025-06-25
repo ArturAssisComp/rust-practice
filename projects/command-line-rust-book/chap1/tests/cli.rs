@@ -1,8 +1,8 @@
-use std::process::Command;
+use assert_cmd::Command;
+const CLI_NAME: &str = "chap1";
 
 #[test]
-fn should_return_0() {
-    let mut cmd = Command::new("ls");
-    let result = cmd.output();
-    assert!(result.is_ok());
+fn should_run_successfully() {
+    let mut cmd = Command::cargo_bin(CLI_NAME).unwrap();
+    cmd.assert().success().stdout("Hello, World!\n");
 }

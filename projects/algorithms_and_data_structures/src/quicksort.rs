@@ -1,5 +1,5 @@
 use rand::{rngs::ThreadRng, Rng};
-use std::fmt::Debug;
+use std::{cmp::min, fmt::Debug};
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum Order {
@@ -286,6 +286,104 @@ fn insertion_sort<T: PartialOrd + Copy>(arr: &mut [T], start: usize, end: usize,
     }
 }
 
+fn merge_sort<T: PartialOrd + Copy + Debug>(arr: &mut [T], start: usize, end: usize, order: Order) {
+    // start < end - 1
+    if start + 1 >= end {
+        return;
+    }
+    let is_not_sorted = order.get_is_not_sorted();
+
+    let len = end - start;
+    let mut currently_sorted_size = 1;
+    let mut max_to_sort_size = 2;
+    let default = arr[start];
+    let mut mirror_arr = vec![default; len];
+    let mut to_arr_index;
+    let mut left;
+    let mut left_limit;
+    let mut right;
+    let mut right_limit;
+    let mut mirror_is_target = true;
+    let mut to_arr: &mut [T] = &mut mirror_arr;
+    let mut from_arr: &[T] = arr;
+
+    while currently_sorted_size < len {
+        for i in 0..=(len / max_to_sort_size) {
+            if mirror_is_target {
+                to_arr_index = i * max_to_sort_size;
+                left = start + to_arr_index;
+                right = left + currently_sorted_size;
+                left_limit = min(right, end);
+                right_limit = min(right + currently_sorted_size, end);
+            } else {
+                left = i * max_to_sort_size;
+                to_arr_index = start + left;
+                right = left + currently_sorted_size;
+                left_limit = min(right, len);
+                right_limit = min(right + currently_sorted_size, len);
+            }
+
+            while left < left_limit && right < right_limit {
+                if is_not_sorted(from_arr[left], from_arr[right]) {
+                    // took right
+                    to_arr[to_arr_index] = from_arr[right];
+                    right += 1;
+                } else {
+                    // took left
+                    to_arr[to_arr_index] = from_arr[left];
+                    left += 1;
+                }
+                to_arr_index += 1;
+            }
+            if left < left_limit {
+                loop {
+                    // took left
+                    to_arr[to_arr_index] = from_arr[left];
+                    left += 1;
+                    to_arr_index += 1;
+
+                    if left >= left_limit {
+                        break;
+                    }
+                }
+                continue;
+            }
+            if right < right_limit {
+                loop {
+                    // took right
+                    to_arr[to_arr_index] = from_arr[right];
+                    right += 1;
+                    to_arr_index += 1;
+                    if right >= right_limit {
+                        break;
+                    }
+                }
+            }
+        }
+        // change the target
+        if mirror_is_target {
+            mirror_is_target = false;
+            to_arr = arr;
+            from_arr = &mirror_arr;
+        } else {
+            mirror_is_target = true;
+            from_arr = arr;
+            to_arr = &mut mirror_arr;
+        }
+        currently_sorted_size = max_to_sort_size;
+        max_to_sort_size *= 2;
+    }
+    if !mirror_is_target {
+        let mut i = 0;
+        let mut j = start;
+        while i < mirror_arr.len() {
+            arr[j] = mirror_arr[i];
+            i += 1;
+            j += 1;
+        }
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -332,143 +430,144 @@ mod test {
         };
     }
 
-    macro_rules! test_quicksort {
-        ($mod_name:ident, $quicksort:ident) => {
+    macro_rules! test_sorting_algorithm {
+        ($mod_name:ident, $sort:ident) => {
             mod $mod_name {
                 use super::*;
 
                 #[test]
                 fn should_sort_empty_arr() {
                     let arr: Vec<u8> = Vec::new();
-                    test_sorting_array!(&arr, $quicksort);
+                    test_sorting_array!(&arr, $sort);
                 }
                 #[test]
                 fn should_sort_1_element_arr() {
                     let arr = [123];
-                    test_sorting_array!(arr, $quicksort);
+                    test_sorting_array!(arr, $sort);
                 }
                 #[test]
                 fn should_sort_2_element_arr() {
                     let arr = [1, 2];
-                    test_sorting_array!(arr, $quicksort);
+                    test_sorting_array!(arr, $sort);
 
                     let arr = [1, 1];
-                    test_sorting_array!(arr, $quicksort);
+                    test_sorting_array!(arr, $sort);
 
                     let arr = ['z', 'a'];
-                    test_sorting_array!(arr, $quicksort);
+                    test_sorting_array!(arr, $sort);
                 }
 
                 #[test]
                 fn should_sort_3_element_arr() {
                     let arr = [1, 2, -23];
-                    test_sorting_array!(arr, $quicksort);
+                    test_sorting_array!(arr, $sort);
                     let arr = [1, 1, 1];
-                    test_sorting_array!(arr, $quicksort);
+                    test_sorting_array!(arr, $sort);
                     let arr = [3, 1, 2];
-                    test_sorting_array!(arr, $quicksort);
+                    test_sorting_array!(arr, $sort);
                     let arr = [1, 3, 2];
-                    test_sorting_array!(arr, $quicksort);
+                    test_sorting_array!(arr, $sort);
                     let arr = [2, 1, 3];
-                    test_sorting_array!(arr, $quicksort);
+                    test_sorting_array!(arr, $sort);
                     let arr = [2, 3, 1];
-                    test_sorting_array!(arr, $quicksort);
+                    test_sorting_array!(arr, $sort);
                     let arr = [3, 2, 1];
-                    test_sorting_array!(arr, $quicksort);
+                    test_sorting_array!(arr, $sort);
                 }
                 #[test]
                 fn should_sort_already_sorted_arrays() {
                     let arr = [1, 2, 3, 4, 5];
-                    test_sorting_array!(arr, $quicksort);
+                    test_sorting_array!(arr, $sort);
                     let arr = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
-                    test_sorting_array!(arr, $quicksort);
+                    test_sorting_array!(arr, $sort);
                     let arr = ['a', 'b', 'c', 'd', 'e'];
-                    test_sorting_array!(arr, $quicksort);
+                    test_sorting_array!(arr, $sort);
                 }
 
                 #[test]
                 fn should_sort_reverse_sorted_arrays() {
                     let arr = [5, 4, 3, 2, 1];
-                    test_sorting_array!(arr, $quicksort);
+                    test_sorting_array!(arr, $sort);
                     let arr = [10, 9, 8, 7, 6, 5, 4, 3, 2, 1];
-                    test_sorting_array!(arr, $quicksort);
+                    test_sorting_array!(arr, $sort);
                     let arr = ['z', 'y', 'x', 'w', 'v'];
-                    test_sorting_array!(arr, $quicksort);
+                    test_sorting_array!(arr, $sort);
                 }
 
                 #[test]
                 fn should_sort_arrays_with_duplicates() {
                     let arr = [1, 3, 2, 3, 1];
-                    test_sorting_array!(arr, $quicksort);
+                    test_sorting_array!(arr, $sort);
                     let arr = [5, 5, 5, 5, 5];
-                    test_sorting_array!(arr, $quicksort);
+                    test_sorting_array!(arr, $sort);
                     let arr = [1, 1, 2, 2, 3, 3];
-                    test_sorting_array!(arr, $quicksort);
+                    test_sorting_array!(arr, $sort);
                     let arr = [7, 3, 7, 1, 3, 7, 1];
-                    test_sorting_array!(arr, $quicksort);
+                    test_sorting_array!(arr, $sort);
                     let arr = ['a', 'b', 'a', 'c', 'b', 'a'];
-                    test_sorting_array!(arr, $quicksort);
+                    test_sorting_array!(arr, $sort);
                 }
 
                 #[test]
                 fn should_sort_arrays_with_negative_numbers() {
                     let arr = [-1, -5, -3, -2, -4];
-                    test_sorting_array!(arr, $quicksort);
+                    test_sorting_array!(arr, $sort);
                     let arr = [-10, 5, -3, 0, 8, -1];
-                    test_sorting_array!(arr, $quicksort);
+                    test_sorting_array!(arr, $sort);
                     let arr = [-100, -1, -50, -25, -75];
-                    test_sorting_array!(arr, $quicksort);
+                    test_sorting_array!(arr, $sort);
                     let arr = [0, -1, 1, -2, 2];
-                    test_sorting_array!(arr, $quicksort);
+                    test_sorting_array!(arr, $sort);
                 }
 
                 #[test]
                 fn should_sort_arrays_with_zeros() {
                     let arr = [0, 0, 0, 0];
-                    test_sorting_array!(arr, $quicksort);
+                    test_sorting_array!(arr, $sort);
                     let arr = [1, 0, -1, 0, 2];
-                    test_sorting_array!(arr, $quicksort);
+                    test_sorting_array!(arr, $sort);
                     let arr = [0, 5, 0, 3, 0, 1];
-                    test_sorting_array!(arr, $quicksort);
+                    test_sorting_array!(arr, $sort);
                 }
                 #[test]
                 fn should_sort_larger_arrays() {
                     let arr = [64, 34, 25, 12, 22, 11, 90, 88, 76, 50, 42, 30, 5, 77, 55];
-                    test_sorting_array!(arr, $quicksort);
+                    test_sorting_array!(arr, $sort);
                     let arr = [
                         100, 99, 98, 97, 96, 95, 94, 93, 92, 91, 90, 89, 88, 87, 86, 85, 84, 83,
                         82, 81,
                     ];
-                    test_sorting_array!(arr, $quicksort);
+                    test_sorting_array!(arr, $sort);
                 }
                 #[test]
                 fn should_sort_extreme_values() {
                     let arr = [i32::MAX, i32::MIN, 0, 1, -1];
-                    test_sorting_array!(arr, $quicksort);
+                    test_sorting_array!(arr, $sort);
                     let arr = [i32::MIN, i32::MIN + 1, i32::MAX - 1, i32::MAX];
-                    test_sorting_array!(arr, $quicksort);
+                    test_sorting_array!(arr, $sort);
                 }
                 #[test]
                 fn should_handle_stress_test_cases() {
                     // Array where pivot selection matters
                     let arr = [1, 1, 1, 1, 1, 2, 1, 1, 1, 1];
-                    test_sorting_array!(arr, $quicksort);
+                    test_sorting_array!(arr, $sort);
 
                     // Worst case for naive pivot selection (first element)
                     let arr = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
-                    test_sorting_array!(arr, $quicksort);
+                    test_sorting_array!(arr, $sort);
                 }
             }
         };
     }
-    test_quicksort!(test_insertion_sort, insertion_sort);
-    test_quicksort!(test_efficient_quicksort, quicksort);
-    test_quicksort!(test_quicksort_ineficient, quicksort_ineficient);
-    test_quicksort!(
+    test_sorting_algorithm!(test_insertion_sort, insertion_sort);
+    test_sorting_algorithm!(test_merge_sort, merge_sort);
+    test_sorting_algorithm!(test_efficient_quicksort, quicksort);
+    test_sorting_algorithm!(test_quicksort_ineficient, quicksort_ineficient);
+    test_sorting_algorithm!(
         test_quicksort_ineficient_random_partition,
         quicksort_ineficient_random_partition
     );
-    test_quicksort!(
+    test_sorting_algorithm!(
         test_quicksort_efficient_random_partition,
         quicksort_efficient_random_partition
     );
