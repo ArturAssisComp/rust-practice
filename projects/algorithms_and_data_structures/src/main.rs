@@ -10,13 +10,15 @@ mod macros;
 
 mod d_ary_heap;
 
-mod quicksort;
+mod sort;
 
 mod random;
 
 mod min_max;
 
-use quicksort::{quicksort_ineficient, Order};
+mod inversions;
+
+use sort::{quicksort_ineficient, Order};
 
 fn main() {
     /*
