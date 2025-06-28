@@ -18,6 +18,8 @@ mod min_max;
 
 mod inversions;
 
+mod matrix;
+
 use sort::{quicksort_ineficient, Order};
 
 fn main() {
